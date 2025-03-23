@@ -5,6 +5,12 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
 
+def tty_input(prompt=""):
+    with open("/dev/tty", "r") as tty:
+        print(prompt, end="", flush=True)
+        return tty.readline().rstrip("\n")
+
+
 def load_credentials():
     """Loads Spotify credentials from ~/.spotify_credentials."""
     credentials_path = os.path.expanduser("~/.spotify_credentials")
@@ -127,7 +133,7 @@ def main():
             fuzzy_matches = find_fuzzy_matches(sp, artist, title)
             for idx, (_, name, artist) in enumerate(fuzzy_matches, 1):
                 print(f"{idx}. {artist} - {name}")
-            choice = input("Select a match number, or press Enter to skip: ")
+            choice = tty_input("Select a match number, or press Enter to skip: ")
             if choice.isdigit() and 1 <= int(choice) <= len(fuzzy_matches):
                 track_uris.append(fuzzy_matches[int(choice) - 1][0])
             else:
