@@ -22,10 +22,9 @@ def load_credentials():
 
 def parse_filename(filename):
     """Extracts artist and song title from the given filename."""
-    base_name = os.path.splitext(filename.strip())[
-        0
-    ]  # Remove .mp3 extension and strip spaces
-    parts = base_name.split("_-_")  # Split by "_-_"
+    # Remove .mp3 extension and strip spaces
+    base_name = os.path.splitext(filename.strip())[0]
+    parts = base_name.split("_-_")
     if len(parts) == 2:
         artist, title = parts
         return artist.replace("_", " "), title.replace("_", " ")
@@ -37,7 +36,24 @@ def search_track(sp, artist, title):
     query = f"artist:{artist} track:{title}"
     results = sp.search(q=query, type="track", limit=1)
     tracks = results.get("tracks", {}).get("items", [])
-    return tracks[0]["uri"] if tracks else None
+    if tracks:
+        print(
+            f"✅ Exact match found: {tracks[0]['artists'][0]['name']} - {tracks[0]['name']}"
+        )
+        return tracks[0]["uri"]
+    else:
+        print(f"❌ No match for '{title}' by '{artist}'")
+        return None
+
+
+def find_fuzzy_matches(sp, artist, title):
+    """Finds fuzzy matches for a given artist and title."""
+    query = f"{artist} {title}"
+    results = sp.search(q=query, type="track", limit=5)
+    tracks = results.get("tracks", {}).get("items", [])
+    return [
+        (track["uri"], track["name"], track["artists"][0]["name"]) for track in tracks
+    ]
 
 
 def create_playlist(sp, user_id, playlist_name):
@@ -96,22 +112,38 @@ def main():
             if track_uri:
                 track_uris.append(track_uri)
             else:
-                unmatched_songs.append(filename)
+                unmatched_songs.append((filename, artist, title))
         else:
             unparsed_files.append(filename)
 
     add_tracks_to_playlist(sp, playlist_id, track_uris)
     print(f"Playlist created: {playlist_name}")
+    track_uris = []
+
+    still_unmatched_songs = []
+    if unmatched_songs:
+        for filename, artist, title in unmatched_songs:
+            print(f"No exact match for {filename}. Possible matches:")
+            fuzzy_matches = find_fuzzy_matches(sp, artist, title)
+            for idx, (_, name, artist) in enumerate(fuzzy_matches, 1):
+                print(f"{idx}. {artist} - {name}")
+            choice = input("Select a match number, or press Enter to skip: ")
+            if choice.isdigit() and 1 <= int(choice) <= len(fuzzy_matches):
+                track_uris.append(fuzzy_matches[int(choice) - 1][0])
+            else:
+                still_unmatched_songs.append((filename, artist, title))
+
+    add_tracks_to_playlist(sp, playlist_id, track_uris)
 
     if unparsed_files:
         print("Could not parse filenames:")
         for file in unparsed_files:
             print(file)
 
-    if unmatched_songs:
-        print("Songs not found on Spotify:")
-        for song in unmatched_songs:
-            print(song)
+    if still_unmatched_songs:
+        print("Songs not processed after fuzzy search:")
+        for filename, _, _ in unmatched_songs:
+            print(filename)
 
 
 if __name__ == "__main__":
