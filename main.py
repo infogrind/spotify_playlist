@@ -38,10 +38,10 @@ def parse_filename(filename):
     """Extracts artist and song title from the given filename."""
     # Remove .mp3 extension and strip spaces
     base_name = os.path.splitext(filename.strip())[0]
-    parts = base_name.split("_-_")
+    parts = base_name.replace("_", " ").split(" - ")
     if len(parts) == 2:
         artist, title = parts
-        return artist.replace("_", " "), title.replace("_", " ")
+        return artist, title
     return None, None
 
 
@@ -103,10 +103,22 @@ def add_tracks_to_playlist(sp, playlist_id, track_uris):
                 sp.playlist_add_items(playlist_id, batch)
 
 
+def list_mp3_files(directory: str):
+    """
+    Returns a list of all *.mp3 or *.MP3 files (case insensitive) in the given directory.
+    The list contains only filenames, not full paths.
+
+    :param directory: Path to the directory to scan.
+    :return: List of MP3 filenames.
+    """
+    return [f for f in os.listdir(directory) if f.lower().endswith(".mp3")]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Create a Spotify playlist from a list of songs."
     )
+    parser.add_argument("--dir", required=True, help="Name of the directory to scan.")
     parser.add_argument(
         "--playlist", required=True, help="Name of the Spotify playlist to create."
     )
@@ -116,6 +128,10 @@ def main():
     args = parser.parse_args()
     global verbose
     verbose = args.verbose
+
+    if not os.path.isdir(args.dir):
+        print("Error: {directory} is not a valid directory.")
+        sys.exit(1)
 
     SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET = load_credentials()
     SPOTIPY_REDIRECT_URI = "http://localhost:8888/callback"
@@ -141,7 +157,7 @@ def main():
     unparsed_files = []
     unmatched_songs = []
 
-    for line in sys.stdin:
+    for line in list_mp3_files(args.dir):
         filename = line.strip()
         artist, title = parse_filename(filename)
         if artist and title:
@@ -188,7 +204,7 @@ def main():
 
     if still_unmatched_songs:
         print("Songs not processed after fuzzy search:")
-        for filename, _, _ in unmatched_songs:
+        for filename, _, _ in still_unmatched_songs:
             print(filename)
 
 
