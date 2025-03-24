@@ -137,9 +137,6 @@ def main():
     )
 
     user_id = sp.current_user()["id"]
-    playlist_name = args.playlist
-    playlist_id = get_or_create_playlist(sp, user_id, playlist_name)
-
     track_uris = []
     unparsed_files = []
     unmatched_songs = []
@@ -156,10 +153,6 @@ def main():
         else:
             unparsed_files.append(filename)
 
-    add_tracks_to_playlist(sp, playlist_id, track_uris)
-    print(f"Playlist created: {playlist_name}")
-    track_uris = []
-
     still_unmatched_songs = []
     if unmatched_songs:
         for filename, artist, title in unmatched_songs:
@@ -175,11 +168,16 @@ def main():
                 )
                 if choice.isdigit() and 1 <= int(choice) <= len(fuzzy_matches):
                     track_uris.append(fuzzy_matches[int(choice) - 1][0])
+                    break
                 elif choice:
                     query = choice
                 else:
                     still_unmatched_songs.append((filename, artist, title))
                     break
+
+    playlist_name = args.playlist
+    playlist_id = get_or_create_playlist(sp, user_id, playlist_name)
+    print(f"Playlist created: {playlist_name}")
 
     add_tracks_to_playlist(sp, playlist_id, track_uris)
 
