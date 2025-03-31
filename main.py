@@ -169,7 +169,16 @@ def main():
         "--playlist", required=True, help="Name of the Spotify playlist to create."
     )
     parser.add_argument(
-        "--verbose", required=False, help="Print debug output to stderr."
+        "--fuzzy",
+        required=False,
+        action="store_true",
+        help="Use Fuzzy search for every file.",
+    )
+    parser.add_argument(
+        "--verbose",
+        required=False,
+        action="store_true",
+        help="Print debug output to stderr.",
     )
     args = parser.parse_args()
     global verbose
@@ -226,6 +235,11 @@ def main():
         filename = line.strip()
         artist, title = parse_filename(filename)
         if artist and title:
+            if args.fuzzy:
+                # Don't try to get an immediate match, process later using
+                # fuzzy search.
+                unmatched_songs.append((i, filename, artist, title))
+                continue
             track_uri = search_track(sp, artist, title)
             if track_uri:
                 track_uris[i] = track_uri
@@ -237,7 +251,7 @@ def main():
     still_unmatched_songs = []
     if unmatched_songs:
         for i, filename, artist, title in unmatched_songs:
-            print(f"No exact match for {filename}. Using fuzzy search.")
+            print(f"\n🔎 No exact match for {filename}. Using fuzzy search.")
             query = f"{artist} {title}"
             while True:
                 fuzzy_matches = find_fuzzy_matches(sp, query)
@@ -246,7 +260,7 @@ def main():
                     fuzzy_matches, 1
                 ):
                     print(
-                        f' {idx}. {", ".join([artist] + other_artists)} - {name} (on "{album}"'
+                        f' {idx}. {", ".join([artist] + other_artists)} - {name} (on "{album}")'
                     )
                 choice = tty_input(
                     "Select a match number, enter alternative search string, or press Enter to skip: "
