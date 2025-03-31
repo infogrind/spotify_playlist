@@ -1,8 +1,18 @@
 import os
 import sys
 import argparse
+import signal
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+
+
+def signal_handler(*_):
+    print("\nCtrl+C detected! Cleaning up...")
+    sys.exit(0)  # Exit gracefully
+
+
+# Register the signal handler
+signal.signal(signal.SIGINT, signal_handler)
 
 verbose = False
 
