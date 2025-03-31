@@ -83,7 +83,14 @@ def find_fuzzy_matches(sp, query):
     tracks = results.get("tracks", {}).get("items", [])
     debug(f"Found {len(tracks)} results")
     return [
-        (track["uri"], track["name"], track["artists"][0]["name"]) for track in tracks
+        (
+            track["uri"],
+            track["name"],
+            track["artists"][0]["name"],  # Artist 0
+            track["album"]["name"],  # Album name
+            [artist["name"] for artist in track["artists"][1:]],  # other artists
+        )
+        for track in tracks
     ]
 
 
@@ -235,8 +242,12 @@ def main():
             while True:
                 fuzzy_matches = find_fuzzy_matches(sp, query)
                 print("\nPossible matches:")
-                for idx, (_, name, artist) in enumerate(fuzzy_matches, 1):
-                    print(f" {idx}. {artist} - {name}")
+                for idx, (_, name, artist, album, other_artists) in enumerate(
+                    fuzzy_matches, 1
+                ):
+                    print(
+                        f' {idx}. {", ".join([artist] + other_artists)} - {name} (on "{album}"'
+                    )
                 choice = tty_input(
                     "Select a match number, enter alternative search string, or press Enter to skip: "
                 )
