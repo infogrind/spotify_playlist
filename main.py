@@ -15,6 +15,7 @@ def signal_handler(*_):
 signal.signal(signal.SIGINT, signal_handler)
 
 verbose = False
+dry_run = False
 
 
 def debug(message):
@@ -180,9 +181,16 @@ def main():
         action="store_true",
         help="Print debug output to stderr.",
     )
+    parser.add_argument(
+        "--dry_run",
+        required=False,
+        action="store_true",
+        help="Does not actually create any playlist.",
+    )
     args = parser.parse_args()
-    global verbose
+    global verbose, dry_run
     verbose = args.verbose
+    dry_run = args.dry_run
 
     if (not args.dir and not args.m3u) or (args.dir and args.m3u):
         print("Error: you must specify exactly one of --dir or --m3u.")
@@ -275,13 +283,17 @@ def main():
                     break
 
     playlist_name = args.playlist
-    playlist_id = get_or_create_playlist(sp, user_id, playlist_name)
-    print(f"Playlist created: {playlist_name}")
 
-    # Remove positions without any matches
-    track_uris = [uri for uri in track_uris if uri]
+    if not dry_run:
+        playlist_id = get_or_create_playlist(sp, user_id, playlist_name)
+        print(f"Playlist created: {playlist_name}")
 
-    add_tracks_to_playlist(sp, playlist_id, track_uris)
+        # Remove positions without any matches
+        track_uris = [uri for uri in track_uris if uri]
+
+        add_tracks_to_playlist(sp, playlist_id, track_uris)
+    else:
+        print(f"Not creating playlist {playlist_name} in dry run mode.")
 
     if unparsed_files:
         print("Could not parse filenames:")
