@@ -1,9 +1,10 @@
 import os
 import sys
 import argparse
+import getpass
 import signal
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, CacheFileHandler
 
 
 def signal_handler(*_):
@@ -205,7 +206,7 @@ def main():
         sys.exit(1)
 
     SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET = load_credentials()
-    SPOTIPY_REDIRECT_URI = "http://localhost:8888/callback"
+    SPOTIPY_REDIRECT_URI = "http://127.0.0.1:8888/callback"
 
     if not SPOTIPY_CLIENT_ID or not SPOTIPY_CLIENT_SECRET:
         print(
@@ -220,6 +221,9 @@ def main():
             client_secret=SPOTIPY_CLIENT_SECRET,
             redirect_uri=SPOTIPY_REDIRECT_URI,
             scope=scope,
+            cache_handler=CacheFileHandler(
+                cache_path=f"/tmp/.spotipy-cache-{getpass.getuser()}"
+            ),
         )
     )
 
